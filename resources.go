@@ -3,8 +3,12 @@ package main
 import (
 	"io"
 
-	"github.com/emicklei/go-restful"
+	restful "github.com/emicklei/go-restful"
 )
+
+type SelfRegisteringResource interface {
+	Register(string)
+}
 
 type PingResource struct {
 }
