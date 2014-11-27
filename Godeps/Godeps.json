@@ -3,9 +3,82 @@
 	"GoVersion": "go1.3.3",
 	"Deps": [
 		{
+			"ImportPath": "code.google.com/p/go-uuid/uuid",
+			"Comment": "null-12",
+			"Rev": "7dda39b2e7d5e265014674c5af696ba4186679e9"
+		},
+		{
+			"ImportPath": "code.google.com/p/go.net/context",
+			"Comment": "null-212",
+			"Rev": "acb611e3aee7616827025f64d2a9f740658b3538"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/api",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/client",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/conversion",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/health",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/labels",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/runtime",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/util",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/version",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/watch",
+			"Comment": "v0.4-848-gccc8bc8",
+			"Rev": "ccc8bc82898d325d242f65f59210abde0e843b73"
+		},
+		{
 			"ImportPath": "github.com/emicklei/go-restful",
 			"Comment": "v1.1.2-42-g4b02481",
 			"Rev": "4b0248154311ad3611493ed41e43eaad64712c84"
+		},
+		{
+			"ImportPath": "github.com/golang/glog",
+			"Rev": "44145f04b68cf362d9c4df2182967c2275eaefed"
+		},
+		{
+			"ImportPath": "github.com/google/cadvisor/info",
+			"Comment": "0.5.0-40-ga1e72b2",
+			"Rev": "a1e72b2017992191970b5c6d5846c8265cd96255"
+		},
+		{
+			"ImportPath": "github.com/jessevdk/go-flags",
+			"Comment": "v1-280-g37e89eb",
+			"Rev": "37e89eb6730ccfebfa05c17940954e4308719317"
+		},
+		{
+			"ImportPath": "gopkg.in/v1/yaml",
+			"Rev": "9f9df34309c04878acc86042b16630b0f696e1de"
 		}
 	]
 }

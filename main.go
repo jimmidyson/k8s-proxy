@@ -54,8 +54,6 @@ func main() {
 		log.Printf("Connecting to Kubernetes master at %v running version %v", options.KubernetesMaster, serverVersion.String())
 	}
 
-	restful.DefaultContainer.Filter(NCSACommonLogFormatLogger())
-
 	config := swagger.Config{
 		WebServices: restful.RegisteredWebServices(),
 		ApiPath:     prefix + "/apidocs.json",
@@ -64,10 +62,15 @@ func main() {
 
 	resources := []SelfRegisteringResource{
 		PingResource{},
+		ContainerResource{client: k8sClient},
 	}
 	for _, resource := range resources {
 		resource.Register(prefix)
 	}
+
+	restful.Filter(NCSACommonLogFormatLogger())
+	restful.Filter(restful.OPTIONSFilter())
+	restful.DefaultContainer.EnableContentEncoding(true)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), nil))
 }
