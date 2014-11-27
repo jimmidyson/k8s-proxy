@@ -34,6 +34,10 @@ func main() {
 		os.Exit(0)
 	}
 
+	if len(options.KubernetesMaster) == 0 && len(os.Getenv("KUBERNETES_RO_SERVICE_HOST")) > 0 {
+		options.KubernetesMaster = os.ExpandEnv("http://${KUBERNETES_RO_SERVICE_HOST}:${KUBERNETES_RO_SERVICE_PORT}")
+	}
+
 	k8sConfig := &k8sclient.Config{
 		Host:    options.KubernetesMaster,
 		Version: options.KubernetesApiVersion,
@@ -45,9 +49,9 @@ func main() {
 	}
 
 	if serverVersion, err := k8sClient.ServerVersion(); err != nil {
-		log.Panic("Couldn't retrieve Kubernetes server version - incorrect URL possibly? ", err)
+		log.Panic("Couldn't retrieve Kubernetes server version - incorrect URL possibly?", err)
 	} else {
-		log.Printf("Connecting to Kubernetes server at version %v", serverVersion.String())
+		log.Printf("Connecting to Kubernetes master at %v running version %v", options.KubernetesMaster, serverVersion.String())
 	}
 
 	restful.DefaultContainer.Filter(NCSACommonLogFormatLogger())
