@@ -1,0 +1,11 @@
+{
+	"ImportPath": "github.com/jimmidyson/k8s-rest-extras",
+	"GoVersion": "go1.3.3",
+	"Deps": [
+		{
+			"ImportPath": "github.com/emicklei/go-restful",
+			"Comment": "v1.1.2-42-g4b02481",
+			"Rev": "4b0248154311ad3611493ed41e43eaad64712c84"
+		}
+	]
+}
