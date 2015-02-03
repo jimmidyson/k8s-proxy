@@ -30,7 +30,7 @@ type RequestForwarder struct {
 }
 
 func (r *RequestForwarder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	destUrl, err := r.getForwardUrl(req)
+	destUrl, prefix, err := r.getForwardUrl(req)
 	if err != nil {
 		r.errHandler.ServeHTTP(w, req, err)
 		return
@@ -44,18 +44,19 @@ func (r *RequestForwarder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: destUrl.Host})
 	proxy.Transport = &proxyTransport{
-		proxyScheme: req.URL.Scheme,
-		proxyHost:   req.URL.Host,
+		proxyScheme:      req.URL.Scheme,
+		proxyHost:        req.URL.Host,
+		proxyPathPrepend: prefix,
 	}
 	proxy.FlushInterval = 200 * time.Millisecond
 	proxy.ServeHTTP(w, newReq)
 }
 
-func (r *RequestForwarder) getForwardUrl(req *http.Request) (*url.URL, error) {
+func (r *RequestForwarder) getForwardUrl(req *http.Request) (*url.URL, string, error) {
 	parts := r.splitPath(req.URL.Path)
 
 	if parts[0] != "proxy" || len(parts) < 4 {
-		return nil, fmt.Errorf("Unable to determine kind and namespace from url, %v", req.URL)
+		return nil, "", fmt.Errorf("Unable to determine kind and namespace from url, %v", req.URL)
 	}
 
 	namespace := parts[1]
@@ -69,16 +70,18 @@ func (r *RequestForwarder) getForwardUrl(req *http.Request) (*url.URL, error) {
 		podClient := r.client.Pods(namespace)
 		pod, err := podClient.Get(resourceName)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		return url.Parse("http://" + pod.Status.PodIP + ":" + port + "/" + strings.Join(parts, "/"))
+		destUrl, err := url.Parse("http://" + pod.Status.PodIP + ":" + port + "/" + strings.Join(parts, "/"))
+		return destUrl, path.Join(r.prefix, namespace, kind, resourceName, port), err
 	} else {
 		serviceClient := r.client.Services(namespace)
 		service, err := serviceClient.Get(resourceName)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		return url.Parse("http://" + service.Spec.PortalIP + ":" + strconv.Itoa(service.Spec.Port) + "/" + strings.Join(parts, "/"))
+		destUrl, err := url.Parse("http://" + service.Spec.PortalIP + ":" + strconv.Itoa(service.Spec.Port) + "/" + strings.Join(parts, "/"))
+		return destUrl, path.Join(r.prefix, namespace, kind, resourceName), err
 	}
 }
 
