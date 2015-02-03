@@ -3,7 +3,7 @@ build/container: stage/k8s-rest-extras Dockerfile
 	touch build/container
 
 build/k8s-rest-extras: *.go
-	GOOS=linux GOARCH=amd64 go build -o build/k8s-rest-extras
+	GOOS=linux GOARCH=amd64 godep go build -o build/k8s-rest-extras
 
 stage/k8s-rest-extras: build/k8s-rest-extras
 	mkdir -p stage
