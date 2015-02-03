@@ -1,9 +1,9 @@
 FROM busybox:latest
 MAINTAINER Jimmi Dyson <jimmidyson@gmail.com>
 
-ADD ./stage/k8s-rest-extras /bin/k8s-rest-extras
+ADD ./stage/k8s-proxy /bin/k8s-proxy
 
-EXPOSE 8000
+EXPOSE 9090
 
-ENTRYPOINT ["/bin/k8s-rest-extras"]
+ENTRYPOINT ["/bin/k8s-proxy"]
 CMD []
