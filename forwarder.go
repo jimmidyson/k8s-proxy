@@ -36,6 +36,10 @@ func (r *RequestForwarder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if strings.HasSuffix(req.URL.Path, "/") {
+		destUrl.Path = destUrl.Path + "/"
+	}
+
 	newReq, err := http.NewRequest(req.Method, destUrl.String(), req.Body)
 
 	proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: destUrl.Host})
