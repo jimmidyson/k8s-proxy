@@ -7,8 +7,6 @@ import (
 	"os"
 
 	k8sclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
-	restful "github.com/emicklei/go-restful"
-	"github.com/emicklei/go-restful/swagger"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -20,6 +18,9 @@ type Options struct {
 	Port                 uint16 `short:"p" long:"port" description:"The port to listen on" default:"9090"`
 	KubernetesMaster     string `short:"k" long:"kubernetes-master" description:"The URL to the Kubernetes master"`
 	KubernetesApiVersion string `short:"v" long:"kubernetes-api-version" description:"The version of the Kubernetes API to use" default:"v1beta2"`
+	Insecure             bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
+	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from"`
+	Html5Mode            bool   `long:"html5mode" description:"Send default page (/index.html) on 404" default:"true"`
 }
 
 func main() {
@@ -34,13 +35,16 @@ func main() {
 		os.Exit(0)
 	}
 
-	if len(options.KubernetesMaster) == 0 && len(os.Getenv("KUBERNETES_RO_SERVICE_HOST")) > 0 {
-		options.KubernetesMaster = os.ExpandEnv("http://${KUBERNETES_RO_SERVICE_HOST}:${KUBERNETES_RO_SERVICE_PORT}")
+	if len(options.KubernetesMaster) == 0 && len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
+		options.KubernetesMaster = "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
 	}
 
+	options.KubernetesMaster = os.ExpandEnv(options.KubernetesMaster)
+
 	k8sConfig := &k8sclient.Config{
-		Host:    options.KubernetesMaster,
-		Version: options.KubernetesApiVersion,
+		Host:     options.KubernetesMaster,
+		Version:  options.KubernetesApiVersion,
+		Insecure: options.Insecure,
 	}
 
 	k8sClient, err := k8sclient.New(k8sConfig)
@@ -49,28 +53,24 @@ func main() {
 	}
 
 	if serverVersion, err := k8sClient.ServerVersion(); err != nil {
-		log.Panic("Couldn't retrieve Kubernetes server version - incorrect URL possibly?", err)
+		log.Panic("Couldn't retrieve Kubernetes server version - incorrect URL?", err)
 	} else {
 		log.Printf("Connecting to Kubernetes master at %v running version %v", options.KubernetesMaster, serverVersion.String())
 	}
 
-	config := swagger.Config{
-		WebServices: restful.RegisteredWebServices(),
-		ApiPath:     prefix + "/apidocs.json",
-	}
-	swagger.InstallSwaggerService(config)
-
-	resources := []SelfRegisteringResource{
-		PingResource{},
-		ContainerResource{client: k8sClient},
-	}
-	for _, resource := range resources {
-		resource.Register(prefix)
+	if err := newApiProxyServer(k8sConfig); err != nil {
+		log.Panic("Couldn't start API proxy server", err)
 	}
 
-	restful.Filter(NCSACommonLogFormatLogger())
-	restful.Filter(restful.OPTIONSFilter())
-	restful.DefaultContainer.EnableContentEncoding(true)
+	if len(options.StaticDir) > 0 {
+		defaultPage := "/"
+		if !options.Html5Mode {
+			defaultPage = ""
+		}
+		http.Handle("/", FileServerWithDefault(http.Dir(options.StaticDir), defaultPage))
+	}
+
+	log.Printf("Listening on port %d", options.Port)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), nil))
 }
