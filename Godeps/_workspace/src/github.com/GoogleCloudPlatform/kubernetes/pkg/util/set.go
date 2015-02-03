@@ -39,9 +39,11 @@ func (s StringSet) Insert(items ...string) {
 	}
 }
 
-// Delete removes item from the set.
-func (s StringSet) Delete(item string) {
-	delete(s, item)
+// Delete removes all items from the set.
+func (s StringSet) Delete(items ...string) {
+	for _, item := range items {
+		delete(s, item)
+	}
 }
 
 // Has returns true iff item is contained in the set.
@@ -78,4 +80,9 @@ func (s StringSet) List() []string {
 	}
 	sort.StringSlice(res).Sort()
 	return res
+}
+
+// Len returns the size of the set.
+func (s StringSet) Len() int {
+	return len(s)
 }

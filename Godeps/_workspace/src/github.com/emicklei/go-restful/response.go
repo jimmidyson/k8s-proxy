@@ -56,11 +56,6 @@ func (r Response) AddHeader(header string, value string) Response {
 	return r
 }
 
-// SetRequestAccepts tells the response what Mime-type(s) the HTTP request said it wants to accept. Exposed for testing.
-func (r *Response) SetRequestAccepts(mime string) {
-	r.requestAccept = mime
-}
-
 // WriteEntity marshals the value using the representation denoted by the Accept Header (XML or JSON)
 // If no Accept header is specified (or */*) then return the Content-Type as specified by the first in the Route.Produces.
 // If an Accept header is specified then return the Content-Type as specified by the first in the Route.Produces that is matched with the Accept header.
@@ -99,9 +94,6 @@ func (r *Response) WriteEntity(value interface{}) error {
 	} else if DefaultResponseMimeType == MIME_XML {
 		return r.WriteAsXml(value)
 	} else {
-		if trace {
-			traceLogger.Printf("mismatch in mime-types and no defaults; (http)Accept=%v,(route)Produces=%v\n", r.requestAccept, r.routeProduces)
-		}
 		r.WriteHeader(http.StatusNotAcceptable) // for recording only
 		r.ResponseWriter.WriteHeader(http.StatusNotAcceptable)
 		if _, err := r.Write([]byte("406: Not Acceptable")); err != nil {
@@ -182,7 +174,7 @@ func (r *Response) WriteServiceError(httpStatus int, err ServiceError) error {
 
 // WriteErrorString is a convenience method for an error status with the actual error
 func (r *Response) WriteErrorString(status int, errorReason string) error {
-	r.statusCode = status // for recording only
+	r.WriteHeader(status) // for recording only
 	r.ResponseWriter.WriteHeader(status)
 	if _, err := r.Write([]byte(errorReason)); err != nil {
 		return err
@@ -192,15 +184,13 @@ func (r *Response) WriteErrorString(status int, errorReason string) error {
 
 // WriteHeader is overridden to remember the Status Code that has been written.
 // Note that using this method, the status value is only written when
-// - calling WriteEntity,
-// - or directly calling WriteAsXml or WriteAsJson,
-// - or if the status is one for which no response is allowed (i.e.,
-//   204 (http.StatusNoContent) or 304 (http.StatusNotModified))
+// - calling WriteEntity
+// - or directly WriteAsXml,WriteAsJson.
+// - or if the status is 204 (http.StatusNoContent)
 func (r *Response) WriteHeader(httpStatus int) {
 	r.statusCode = httpStatus
 	// if 204 then WriteEntity will not be called so we need to pass this code
-	if http.StatusNoContent == httpStatus ||
-		http.StatusNotModified == httpStatus {
+	if http.StatusNoContent == httpStatus {
 		r.ResponseWriter.WriteHeader(httpStatus)
 	}
 }

@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -55,25 +54,35 @@ func (rt *bearerAuthRoundTripper) RoundTrip(req *http.Request) (*http.Response, 
 	return rt.rt.RoundTrip(req)
 }
 
-func NewClientCertTLSTransport(certFile, keyFile, caFile string) (*http.Transport, error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, err
-	}
-	data, err := ioutil.ReadFile(caFile)
+func NewClientCertTLSTransport(certData, keyData, caData []byte) (*http.Transport, error) {
+	cert, err := tls.X509KeyPair(certData, keyData)
 	if err != nil {
 		return nil, err
 	}
 	certPool := x509.NewCertPool()
-	certPool.AppendCertsFromPEM(data)
+	certPool.AppendCertsFromPEM(caData)
 	return &http.Transport{
 		TLSClientConfig: &tls.Config{
+			// Change default from SSLv3 to TLSv1.0 (because of POODLE vulnerability)
+			MinVersion: tls.VersionTLS10,
 			Certificates: []tls.Certificate{
 				cert,
 			},
 			RootCAs:    certPool,
 			ClientCAs:  certPool,
 			ClientAuth: tls.RequireAndVerifyClientCert,
+		},
+	}, nil
+}
+
+func NewTLSTransport(caData []byte) (*http.Transport, error) {
+	certPool := x509.NewCertPool()
+	certPool.AppendCertsFromPEM(caData)
+	return &http.Transport{
+		TLSClientConfig: &tls.Config{
+			// Change default from SSLv3 to TLSv1.0 (because of POODLE vulnerability)
+			MinVersion: tls.VersionTLS10,
+			RootCAs:    certPool,
 		},
 	}, nil
 }

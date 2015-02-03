@@ -40,6 +40,12 @@ func TestErrorNew(t *testing.T) {
 	if IsInvalid(err) {
 		t.Errorf("expected to not be %s", api.StatusReasonInvalid)
 	}
+	if IsBadRequest(err) {
+		t.Errorf("expected to not be %s", api.StatusReasonBadRequest)
+	}
+	if IsMethodNotSupported(err) {
+		t.Errorf("expected to not be %s", api.StatusReasonMethodNotAllowed)
+	}
 
 	if !IsConflict(NewConflict("test", "2", errors.New("message"))) {
 		t.Errorf("expected to be conflict")
@@ -50,11 +56,17 @@ func TestErrorNew(t *testing.T) {
 	if !IsInvalid(NewInvalid("test", "2", nil)) {
 		t.Errorf("expected to be %s", api.StatusReasonInvalid)
 	}
+	if !IsBadRequest(NewBadRequest("reason")) {
+		t.Errorf("expected to be %s", api.StatusReasonBadRequest)
+	}
+	if !IsMethodNotSupported(NewMethodNotSupported("foo", "delete")) {
+		t.Errorf("expected to be %s", api.StatusReasonMethodNotAllowed)
+	}
 }
 
 func TestNewInvalid(t *testing.T) {
 	testCases := []struct {
-		Err     ValidationError
+		Err     *ValidationError
 		Details *api.StatusDetails
 	}{
 		{
@@ -69,7 +81,7 @@ func TestNewInvalid(t *testing.T) {
 			},
 		},
 		{
-			NewFieldInvalid("field[0].name", "bar"),
+			NewFieldInvalid("field[0].name", "bar", "detail"),
 			&api.StatusDetails{
 				Kind: "kind",
 				ID:   "name",
@@ -117,7 +129,7 @@ func TestNewInvalid(t *testing.T) {
 		vErr, expected := testCase.Err, testCase.Details
 		expected.Causes[0].Message = vErr.Error()
 		err := NewInvalid("kind", "name", ValidationErrorList{vErr})
-		status := err.(*statusError).Status()
+		status := err.(*StatusError).ErrStatus
 		if status.Code != 422 || status.Reason != api.StatusReasonInvalid {
 			t.Errorf("%d: unexpected status: %#v", i, status)
 		}

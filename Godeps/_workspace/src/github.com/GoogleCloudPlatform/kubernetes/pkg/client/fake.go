@@ -17,7 +17,11 @@ limitations under the License.
 package client
 
 import (
+	"net/http"
+	"net/url"
+
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/runtime"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/version"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/watch"
 )
@@ -35,7 +39,7 @@ type Fake struct {
 	Ctrl          api.ReplicationController
 	ServiceList   api.ServiceList
 	EndpointsList api.EndpointsList
-	MinionsList   api.MinionList
+	MinionsList   api.NodeList
 	EventsList    api.EventList
 	Err           error
 	Watch         watch.Interface
@@ -45,8 +49,8 @@ func (c *Fake) ReplicationControllers(namespace string) ReplicationControllerInt
 	return &FakeReplicationControllers{Fake: c, Namespace: namespace}
 }
 
-func (c *Fake) Minions() MinionInterface {
-	return &FakeMinions{Fake: c}
+func (c *Fake) Nodes() NodeInterface {
+	return &FakeNodes{Fake: c}
 }
 
 func (c *Fake) Events(namespace string) EventInterface {
@@ -74,4 +78,44 @@ func (c *Fake) ServerVersion() (*version.Info, error) {
 func (c *Fake) ServerAPIVersions() (*api.APIVersions, error) {
 	c.Actions = append(c.Actions, FakeAction{Action: "get-apiversions", Value: nil})
 	return &api.APIVersions{Versions: []string{"v1beta1", "v1beta2"}}, nil
+}
+
+type HTTPClientFunc func(*http.Request) (*http.Response, error)
+
+func (f HTTPClientFunc) Do(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+// FakeRESTClient provides a fake RESTClient interface.
+type FakeRESTClient struct {
+	Client HTTPClient
+	Codec  runtime.Codec
+	Legacy bool
+	Req    *http.Request
+	Resp   *http.Response
+	Err    error
+}
+
+func (c *FakeRESTClient) Get() *Request {
+	return NewRequest(c, "GET", &url.URL{Host: "localhost"}, c.Codec, c.Legacy, c.Legacy)
+}
+
+func (c *FakeRESTClient) Put() *Request {
+	return NewRequest(c, "PUT", &url.URL{Host: "localhost"}, c.Codec, c.Legacy, c.Legacy)
+}
+
+func (c *FakeRESTClient) Post() *Request {
+	return NewRequest(c, "POST", &url.URL{Host: "localhost"}, c.Codec, c.Legacy, c.Legacy)
+}
+
+func (c *FakeRESTClient) Delete() *Request {
+	return NewRequest(c, "DELETE", &url.URL{Host: "localhost"}, c.Codec, c.Legacy, c.Legacy)
+}
+
+func (c *FakeRESTClient) Do(req *http.Request) (*http.Response, error) {
+	c.Req = req
+	if c.Client != HTTPClient(nil) {
+		return c.Client.Do(req)
+	}
+	return c.Resp, c.Err
 }

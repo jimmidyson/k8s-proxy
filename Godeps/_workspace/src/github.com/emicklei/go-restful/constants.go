@@ -22,7 +22,6 @@ const (
 	HEADER_AccessControlAllowOrigin      = "Access-Control-Allow-Origin"
 	HEADER_AccessControlAllowCredentials = "Access-Control-Allow-Credentials"
 	HEADER_AccessControlAllowHeaders     = "Access-Control-Allow-Headers"
-	HEADER_AccessControlMaxAge           = "Access-Control-Max-Age"
 
 	ENCODING_GZIP    = "gzip"
 	ENCODING_DEFLATE = "deflate"

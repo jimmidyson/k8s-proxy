@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
@@ -51,6 +52,29 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// UnexpectedStatusError is returned as an error if a response's body and HTTP code don't
+// make sense together.
+type UnexpectedStatusError struct {
+	Request  *http.Request
+	Response *http.Response
+	Body     string
+}
+
+// Error returns a textual description of 'u'.
+func (u *UnexpectedStatusError) Error() string {
+	return fmt.Sprintf("request [%+v] failed (%d) %s: %s", u.Request, u.Response.StatusCode, u.Response.Status, u.Body)
+}
+
+// RequestConstructionError is returned when there's an error assembling a request.
+type RequestConstructionError struct {
+	Err error
+}
+
+// Error returns a textual description of 'r'.
+func (r *RequestConstructionError) Error() string {
+	return fmt.Sprintf("request construction error: '%v'", r.Err)
+}
+
 // Request allows for building up a request to a server in a chained fashion.
 // Any errors are stored until the end of your call, so you only have to
 // check once.
@@ -65,36 +89,91 @@ type Request struct {
 	// whether to poll.
 	poller PollFunc
 
-	// accessible via method setters
-	path     string
-	params   map[string]string
-	selector labels.Selector
-	sync     bool
-	timeout  time.Duration
+	// If true, add "?namespace=<namespace>" as a query parameter, if false put ns/<namespace> in path
+	// Query parameter is considered legacy behavior
+	namespaceInQuery bool
+	// If true, lowercase resource prior to inserting into a path, if false, leave it as is. Preserving
+	// case is considered legacy behavior.
+	preserveResourceCase bool
+
+	// generic components accessible via method setters
+	path    string
+	subpath string
+	params  map[string]string
+
+	// structural elements of the request that are part of the Kubernetes API conventions
+	namespace    string
+	namespaceSet bool
+	resource     string
+	resourceName string
+	selector     labels.Selector
+	sync         bool
+	timeout      time.Duration
 
 	// output
 	err  error
 	body io.Reader
 }
 
-// NewRequest creates a new request with the core attributes.
-func NewRequest(client HTTPClient, verb string, baseURL *url.URL, codec runtime.Codec) *Request {
+// NewRequest creates a new request helper object for accessing runtime.Objects on a server.
+func NewRequest(client HTTPClient, verb string, baseURL *url.URL,
+	codec runtime.Codec, namespaceInQuery bool, preserveResourceCase bool) *Request {
 	return &Request{
 		client:  client,
 		verb:    verb,
 		baseURL: baseURL,
-		codec:   codec,
+		path:    baseURL.Path,
 
-		path: baseURL.Path,
+		codec:                codec,
+		namespaceInQuery:     namespaceInQuery,
+		preserveResourceCase: preserveResourceCase,
 	}
 }
 
-// Path appends an item to the request path. You must call Path at least once.
-func (r *Request) Path(item string) *Request {
+// Prefix adds segments to the relative beginning to the request path. These
+// items will be placed before the optional Namespace, Resource, or Name sections.
+// Setting AbsPath will clear any previously set Prefix segments
+func (r *Request) Prefix(segments ...string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.path = path.Join(r.path, item)
+	r.path = path.Join(r.path, path.Join(segments...))
+	return r
+}
+
+// Suffix appends segments to the end of the path. These items will be placed after the prefix and optional
+// Namespace, Resource, or Name sections.
+func (r *Request) Suffix(segments ...string) *Request {
+	if r.err != nil {
+		return r
+	}
+	r.subpath = path.Join(r.subpath, path.Join(segments...))
+	return r
+}
+
+// Resource sets the resource to access (<resource>/[ns/<namespace>/]<name>)
+func (r *Request) Resource(resource string) *Request {
+	if r.err != nil {
+		return r
+	}
+	if len(r.resource) != 0 {
+		r.err = fmt.Errorf("resource already set to %q, cannot change to %q", r.resource, resource)
+		return r
+	}
+	r.resource = resource
+	return r
+}
+
+// Name sets the name of a resource to access (<resource>/[ns/<namespace>/]<name>)
+func (r *Request) Name(resourceName string) *Request {
+	if r.err != nil {
+		return r
+	}
+	if len(r.resourceName) != 0 {
+		r.err = fmt.Errorf("resource name already set to %q, cannot change to %q", r.resourceName, resourceName)
+		return r
+	}
+	r.resourceName = resourceName
 	return r
 }
 
@@ -107,23 +186,32 @@ func (r *Request) Sync(sync bool) *Request {
 	return r
 }
 
-// Namespace applies the namespace scope to a request
+// Namespace applies the namespace scope to a request (<resource>/[ns/<namespace>/]<name>)
 func (r *Request) Namespace(namespace string) *Request {
 	if r.err != nil {
 		return r
 	}
-	if len(namespace) > 0 {
-		return r.setParam("namespace", namespace)
+	if r.namespaceSet {
+		r.err = fmt.Errorf("namespace already set to %q, cannot change to %q", r.namespace, namespace)
+		return r
 	}
+	r.namespaceSet = true
+	r.namespace = namespace
 	return r
 }
 
-// AbsPath overwrites an existing path with the path parameter.
-func (r *Request) AbsPath(path string) *Request {
+// AbsPath overwrites an existing path with the segments provided. Trailing slashes are preserved
+// when a single segment is passed.
+func (r *Request) AbsPath(segments ...string) *Request {
 	if r.err != nil {
 		return r
 	}
-	r.path = path
+	if len(segments) == 1 {
+		// preserve any trailing slashes for legacy behavior
+		r.path = segments[0]
+	} else {
+		r.path = path.Join(segments...)
+	}
 	return r
 }
 
@@ -145,6 +233,9 @@ func (r *Request) ParseSelectorParam(paramName, item string) *Request {
 // SelectorParam adds the given selector as a query parameter with the name paramName.
 func (r *Request) SelectorParam(paramName string, s labels.Selector) *Request {
 	if r.err != nil {
+		return r
+	}
+	if s.Empty() {
 		return r
 	}
 	return r.setParam(paramName, s.String())
@@ -218,7 +309,7 @@ func (r *Request) Body(obj interface{}) *Request {
 		}
 		r.body = bytes.NewBuffer(data)
 	default:
-		r.err = fmt.Errorf("Unknown type used for body: %#v", obj)
+		r.err = fmt.Errorf("unknown type used for body: %+v", obj)
 	}
 	return r
 }
@@ -240,11 +331,32 @@ func (r *Request) Poller(poller PollFunc) *Request {
 }
 
 func (r *Request) finalURL() string {
+	p := r.path
+	if r.namespaceSet && !r.namespaceInQuery && len(r.namespace) > 0 {
+		p = path.Join(p, "ns", r.namespace)
+	}
+	if len(r.resource) != 0 {
+		resource := r.resource
+		if !r.preserveResourceCase {
+			resource = strings.ToLower(resource)
+		}
+		p = path.Join(p, resource)
+	}
+	// Join trims trailing slashes, so preserve r.path's trailing slash for backwards compat if nothing was changed
+	if len(r.resourceName) != 0 || len(r.subpath) != 0 {
+		p = path.Join(p, r.resourceName, r.subpath)
+	}
+
 	finalURL := *r.baseURL
-	finalURL.Path = r.path
+	finalURL.Path = p
+
 	query := url.Values{}
 	for key, value := range r.params {
 		query.Add(key, value)
+	}
+
+	if r.namespaceSet && r.namespaceInQuery && len(r.namespace) > 0 {
+		query.Add("namespace", r.namespace)
 	}
 
 	// sync and timeout are handled specially here, to allow setting them
@@ -275,6 +387,9 @@ func (r *Request) Watch() (watch.Interface, error) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		if isProbableEOF(err) {
+			return watch.NewEmptyWatch(), nil
+		}
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -282,9 +397,28 @@ func (r *Request) Watch() (watch.Interface, error) {
 		if resp.Body != nil {
 			body, _ = ioutil.ReadAll(resp.Body)
 		}
-		return nil, fmt.Errorf("For request '%v', got status: %v\nbody: %v", req.URL, resp.StatusCode, string(body))
+		return nil, fmt.Errorf("for request '%+v', got status: %v\nbody: %v", req.URL, resp.StatusCode, string(body))
 	}
 	return watch.NewStreamWatcher(watchjson.NewDecoder(resp.Body, r.codec)), nil
+}
+
+// isProbableEOF returns true if the given error resembles a connection termination
+// scenario that would justify assuming that the watch is empty. The watch stream
+// mechanism handles many common partial data errors, so closed connections can be
+// retried in many cases.
+func isProbableEOF(err error) bool {
+	if uerr, ok := err.(*url.Error); ok {
+		err = uerr.Err
+	}
+	switch {
+	case err == io.EOF:
+		return true
+	case err.Error() == "http: can't write HTTP request on broken connection":
+		return true
+	case strings.Contains(err.Error(), "connection reset by peer"):
+		return true
+	}
+	return false
 }
 
 // Stream formats and executes the request, and offers streaming of the response.
@@ -310,6 +444,13 @@ func (r *Request) Stream() (io.ReadCloser, error) {
 
 // Do formats and executes the request. Returns a Result object for easy response
 // processing. Handles polling the server in the event a continuation was sent.
+//
+// Error type:
+//  * If the request can't be constructed, or an error happened earlier while building its
+//    arguments: *RequestConstructionError
+//  * If the server responds with a status: *errors.StatusError or *errors.UnexpectedObjectError
+//  * If the status code and body don't make sense together: *UnexpectedStatusError
+//  * http.Client.Do errors are returned directly.
 func (r *Request) Do() Result {
 	client := r.client
 	if client == nil {
@@ -318,12 +459,12 @@ func (r *Request) Do() Result {
 
 	for {
 		if r.err != nil {
-			return Result{err: r.err}
+			return Result{err: &RequestConstructionError{r.err}}
 		}
 
 		req, err := http.NewRequest(r.verb, r.finalURL(), r.body)
 		if err != nil {
-			return Result{err: err}
+			return Result{err: &RequestConstructionError{err}}
 		}
 
 		resp, err := client.Do(req)
@@ -381,7 +522,25 @@ func (r *Request) transformResponse(resp *http.Response, req *http.Request) ([]b
 	switch {
 	case resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusPartialContent:
 		if !isStatusResponse {
-			return nil, false, fmt.Errorf("request [%#v] failed (%d) %s: %s", req, resp.StatusCode, resp.Status, string(body))
+			var err error = &UnexpectedStatusError{
+				Request:  req,
+				Response: resp,
+				Body:     string(body),
+			}
+			// TODO: handle other error classes we know about
+			switch resp.StatusCode {
+			case http.StatusConflict:
+				if req.Method == "POST" {
+					err = errors.NewAlreadyExists(r.resource, r.resourceName)
+				} else {
+					err = errors.NewConflict(r.resource, r.resourceName, err)
+				}
+			case http.StatusNotFound:
+				err = errors.NewNotFound(r.resource, r.resourceName)
+			case http.StatusBadRequest:
+				err = errors.NewBadRequest(err.Error())
+			}
+			return nil, false, err
 		}
 		return nil, false, errors.FromObject(&status)
 	}
@@ -435,6 +594,7 @@ func (r Result) WasCreated(wasCreated *bool) Result {
 }
 
 // Error returns the error executing the request, nil if no error occurred.
+// See the Request.Do() comment for what errors you might get.
 func (r Result) Error() error {
 	return r.err
 }

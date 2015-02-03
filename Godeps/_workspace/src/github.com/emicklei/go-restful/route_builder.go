@@ -24,22 +24,6 @@ type RouteBuilder struct {
 	operation               string
 	readSample, writeSample interface{}
 	parameters              []*Parameter
-	errorMap                map[int]ResponseError
-}
-
-// Do evaluates each argument with the RouteBuilder itself.
-// This allows you to follow DRY principles without breaking the fluent programming style.
-// Example:
-// 		ws.Route(ws.DELETE("/{name}").To(t.deletePerson).Do(Returns200, Returns500))
-//
-//		func Returns500(b *RouteBuilder) {
-//			b.Returns(500, "Internal Server Error", restful.ServiceError{})
-//		}
-func (b *RouteBuilder) Do(oneArgBlocks ...func(*RouteBuilder)) *RouteBuilder {
-	for _, each := range oneArgBlocks {
-		each(b)
-	}
-	return b
 }
 
 // To bind the route to a function.
@@ -124,34 +108,6 @@ func (b *RouteBuilder) Operation(name string) *RouteBuilder {
 	return b
 }
 
-// ReturnsError is deprecated, use Returns instead.
-func (b *RouteBuilder) ReturnsError(code int, message string, model interface{}) *RouteBuilder {
-	log.Println("ReturnsError is deprecated, use Returns instead.")
-	return b.Returns(code, message, model)
-}
-
-// Returns allows you to document what responses (errors or regular) can be expected.
-// The model parameter is optional ; either pass a struct instance or use nil if not applicable.
-func (b *RouteBuilder) Returns(code int, message string, model interface{}) *RouteBuilder {
-	err := ResponseError{
-		Code:    code,
-		Message: message,
-		Model:   model,
-	}
-	// lazy init because there is no NewRouteBuilder (yet)
-	if b.errorMap == nil {
-		b.errorMap = map[int]ResponseError{}
-	}
-	b.errorMap[code] = err
-	return b
-}
-
-type ResponseError struct {
-	Code    int
-	Message string
-	Model   interface{}
-}
-
 func (b *RouteBuilder) servicePath(path string) *RouteBuilder {
 	b.rootPath = path
 	return b
@@ -185,20 +141,19 @@ func (b *RouteBuilder) Build() Route {
 		log.Fatalf("[restful] No function specified for route:" + b.currentPath)
 	}
 	route := Route{
-		Method:         b.httpMethod,
-		Path:           concatPath(b.rootPath, b.currentPath),
-		Produces:       b.produces,
-		Consumes:       b.consumes,
-		Function:       b.function,
-		Filters:        b.filters,
-		relativePath:   b.currentPath,
-		pathExpr:       pathExpr,
-		Doc:            b.doc,
-		Operation:      b.operation,
-		ParameterDocs:  b.parameters,
-		ResponseErrors: b.errorMap,
-		ReadSample:     b.readSample,
-		WriteSample:    b.writeSample}
+		Method:        b.httpMethod,
+		Path:          concatPath(b.rootPath, b.currentPath),
+		Produces:      b.produces,
+		Consumes:      b.consumes,
+		Function:      b.function,
+		Filters:       b.filters,
+		relativePath:  b.currentPath,
+		pathExpr:      pathExpr,
+		Doc:           b.doc,
+		Operation:     b.operation,
+		ParameterDocs: b.parameters,
+		ReadSample:    b.readSample,
+		WriteSample:   b.writeSample}
 	route.postBuild()
 	return route
 }

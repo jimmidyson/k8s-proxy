@@ -17,8 +17,10 @@ limitations under the License.
 package api
 
 import (
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/conversion"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/runtime"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
 )
 
 // Codec is the identity codec for this package - it can only convert itself
@@ -27,11 +29,22 @@ var Codec = runtime.CodecFor(Scheme, "")
 
 func init() {
 	Scheme.AddConversionFuncs(
+		func(in *util.Time, out *util.Time, s conversion.Scope) error {
+			// Cannot deep copy these, because time.Time has unexported fields.
+			*out = *in
+			return nil
+		},
+		func(in *resource.Quantity, out *resource.Quantity, s conversion.Scope) error {
+			// Cannot deep copy these, because inf.Dec has unexported fields.
+			*out = *in.Copy()
+			return nil
+		},
 		// Convert ContainerManifest to BoundPod
 		func(in *ContainerManifest, out *BoundPod, s conversion.Scope) error {
 			out.Spec.Containers = in.Containers
 			out.Spec.Volumes = in.Volumes
 			out.Spec.RestartPolicy = in.RestartPolicy
+			out.Spec.DNSPolicy = in.DNSPolicy
 			out.Name = in.ID
 			out.UID = in.UUID
 			// TODO(dchen1107): Move this conversion to pkg/api/v1beta[123]/conversion.go
@@ -48,6 +61,7 @@ func init() {
 			out.Containers = in.Spec.Containers
 			out.Volumes = in.Spec.Volumes
 			out.RestartPolicy = in.Spec.RestartPolicy
+			out.DNSPolicy = in.Spec.DNSPolicy
 			out.Version = "v1beta2"
 			out.ID = in.Name
 			out.UUID = in.UID
@@ -81,7 +95,7 @@ func init() {
 
 		// Convert Pod to BoundPod
 		func(in *Pod, out *BoundPod, s conversion.Scope) error {
-			if err := s.Convert(&in.DesiredState.Manifest, out, 0); err != nil {
+			if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
 				return err
 			}
 			// Only copy a subset of fields, and override manifest attributes with the pod
@@ -104,6 +118,7 @@ func init() {
 			if err := s.Convert(&in.RestartPolicy, &out.RestartPolicy, 0); err != nil {
 				return err
 			}
+			out.DNSPolicy = in.DNSPolicy
 			out.Version = "v1beta2"
 			return nil
 		},
@@ -117,6 +132,7 @@ func init() {
 			if err := s.Convert(&in.RestartPolicy, &out.RestartPolicy, 0); err != nil {
 				return err
 			}
+			out.DNSPolicy = in.DNSPolicy
 			return nil
 		},
 	)

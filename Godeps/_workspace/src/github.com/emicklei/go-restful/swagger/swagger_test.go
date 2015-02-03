@@ -2,7 +2,6 @@ package swagger
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/emicklei/go-restful"
@@ -21,19 +20,16 @@ func TestServiceToApi(t *testing.T) {
 	ws.Consumes(restful.MIME_JSON)
 	ws.Produces(restful.MIME_XML)
 	ws.Route(ws.GET("/all").To(dummy).Writes(sample{}))
-	ws.ApiVersion("1.2.3")
 	cfg := Config{
 		WebServicesUrl: "http://here.com",
 		ApiPath:        "/apipath",
 		WebServices:    []*restful.WebService{ws}}
 	sws := newSwaggerService(cfg)
 	decl := sws.composeDeclaration(ws, "/tests")
-	data, err := json.MarshalIndent(decl, " ", " ")
+	_, err := json.MarshalIndent(decl, " ", " ")
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	// for visual inspection only
-	fmt.Println(string(data))
 }
 
 func dummy(i *restful.Request, o *restful.Response) {}
@@ -42,45 +38,19 @@ func dummy(i *restful.Request, o *restful.Response) {}
 type Response struct {
 	Code  int
 	Users *[]User
-	Items *[]TestItem
+	Items *[]Item
 }
 type User struct {
 	Id, Name string
 }
-type TestItem struct {
+type Item struct {
 	Id, Name string
-}
-
-// clear && go test -v -test.run TestComposeResponseMessages ...swagger
-func TestComposeResponseMessages(t *testing.T) {
-	responseErrors := map[int]restful.ResponseError{}
-	responseErrors[400] = restful.ResponseError{Code: 400, Message: "Bad Request", Model: TestItem{}}
-	route := restful.Route{ResponseErrors: responseErrors}
-	decl := new(ApiDeclaration)
-	decl.Models = map[string]Model{}
-	msgs := composeResponseMessages(route, decl)
-	if msgs[0].ResponseModel != "swagger.TestItem" {
-		t.Errorf("got %s want swagger.TestItem", msgs[0].ResponseModel)
-	}
-}
-
-// clear && go test -v -test.run TestComposeResponseMessageArray ...swagger
-func TestComposeResponseMessageArray(t *testing.T) {
-	responseErrors := map[int]restful.ResponseError{}
-	responseErrors[400] = restful.ResponseError{Code: 400, Message: "Bad Request", Model: []TestItem{}}
-	route := restful.Route{ResponseErrors: responseErrors}
-	decl := new(ApiDeclaration)
-	decl.Models = map[string]Model{}
-	msgs := composeResponseMessages(route, decl)
-	if msgs[0].ResponseModel != "array[swagger.TestItem]" {
-		t.Errorf("got %s want swagger.TestItem", msgs[0].ResponseModel)
-	}
 }
 
 func TestIssue78(t *testing.T) {
 	sws := newSwaggerService(Config{})
 	models := map[string]Model{}
-	sws.addModelFromSampleTo(&Operation{}, true, Response{Items: &[]TestItem{}}, models)
+	sws.addModelFromSampleTo(&Operation{}, true, Response{Items: &[]Item{}}, models)
 	model, ok := models["swagger.Response"]
 	if !ok {
 		t.Fatal("missing response model")
@@ -92,25 +62,25 @@ func TestIssue78(t *testing.T) {
 	if !ok {
 		t.Fatal("missing code")
 	}
-	if "integer" != *code.Type {
-		t.Fatal("wrong code type:" + *code.Type)
+	if "integer" != code.Type {
+		t.Fatal("wrong code type:" + code.Type)
 	}
 	items, ok := model.Properties["Items"]
 	if !ok {
 		t.Fatal("missing items")
 	}
-	if "array" != *items.Type {
-		t.Fatal("wrong items type:" + *items.Type)
+	if "array" != items.Type {
+		t.Fatal("wrong items type:" + items.Type)
 	}
 	items_items := items.Items
-	if len(items_items) == 0 {
+	if items_items == nil {
 		t.Fatal("missing items->items")
 	}
-	ref := items_items[0].Ref
-	if ref == nil {
+	ref := items_items["$ref"]
+	if ref == "" {
 		t.Fatal("missing $ref")
 	}
-	if *ref != "swagger.TestItem" {
-		t.Fatal("wrong $ref:" + *ref)
+	if ref != "swagger.Item" {
+		t.Fatal("wrong $ref:" + ref)
 	}
 }

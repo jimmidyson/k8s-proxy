@@ -1,13 +1,11 @@
 package swagger
 
 import (
-	"fmt"
 	"github.com/emicklei/go-restful"
 	// "github.com/emicklei/hopwatch"
 	"log"
 	"net/http"
 	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -38,9 +36,7 @@ func RegisterSwaggerService(config Config, wsContainer *restful.Container) {
 	ws := new(restful.WebService)
 	ws.Path(config.ApiPath)
 	ws.Produces(restful.MIME_JSON)
-	if config.DisableCORS {
-		ws.Filter(enableCORS)
-	}
+	ws.Filter(enableCORS)
 	ws.Route(ws.GET("/").To(sws.getListing))
 	ws.Route(ws.GET("/{a}").To(sws.getDeclarations))
 	ws.Route(ws.GET("/{a}/{b}").To(sws.getDeclarations))
@@ -130,7 +126,7 @@ func enableCORS(req *restful.Request, resp *restful.Response, chain *restful.Fil
 func (sws SwaggerService) getListing(req *restful.Request, resp *restful.Response) {
 	listing := ResourceListing{SwaggerVersion: swaggerVersion}
 	for k, v := range sws.apiDeclarationMap {
-		ref := Resource{Path: k}
+		ref := ApiRef{Path: k}
 		if len(v.Apis) > 0 { // use description of first (could still be empty)
 			ref.Description = v.Apis[0].Description
 		}
@@ -140,14 +136,7 @@ func (sws SwaggerService) getListing(req *restful.Request, resp *restful.Respons
 }
 
 func (sws SwaggerService) getDeclarations(req *restful.Request, resp *restful.Response) {
-	decl := sws.apiDeclarationMap[composeRootPath(req)]
-	// unless WebServicesUrl is given
-	if len(sws.config.WebServicesUrl) == 0 {
-		// update base path from the actual request
-		// TODO how to detect https? assume http for now
-		(&decl).BasePath = fmt.Sprintf("http://%s", req.Request.Host)
-	}
-	resp.WriteAsJson(decl)
+	resp.WriteAsJson(sws.apiDeclarationMap[composeRootPath(req)])
 }
 
 func (sws SwaggerService) composeDeclaration(ws *restful.WebService, pathPrefix string) ApiDeclaration {
@@ -155,8 +144,7 @@ func (sws SwaggerService) composeDeclaration(ws *restful.WebService, pathPrefix 
 		SwaggerVersion: swaggerVersion,
 		BasePath:       sws.config.WebServicesUrl,
 		ResourcePath:   ws.RootPath(),
-		Models:         map[string]Model{},
-		ApiVersion:     ws.Version()}
+		Models:         map[string]Model{}}
 
 	// collect any path parameters
 	rootParams := []Parameter{}
@@ -172,15 +160,12 @@ func (sws SwaggerService) composeDeclaration(ws *restful.WebService, pathPrefix 
 		}
 	}
 	for path, routes := range pathToRoutes {
-		api := Api{Path: strings.TrimSuffix(path, "/"), Description: ws.Documentation()}
+		api := Api{Path: path, Description: ws.Documentation()}
 		for _, route := range routes {
-			operation := Operation{
-				Method:           route.Method,
-				Summary:          route.Doc,
-				Type:             asDataType(route.WriteSample),
-				Parameters:       []Parameter{},
-				Nickname:         route.Operation,
-				ResponseMessages: composeResponseMessages(route, &decl)}
+			operation := Operation{HttpMethod: route.Method,
+				Summary:  route.Doc,
+				Type:     asDataType(route.WriteSample),
+				Nickname: route.Operation}
 
 			operation.Consumes = route.Consumes
 			operation.Produces = route.Produces
@@ -193,48 +178,12 @@ func (sws SwaggerService) composeDeclaration(ws *restful.WebService, pathPrefix 
 			for _, param := range route.ParameterDocs {
 				operation.Parameters = append(operation.Parameters, asSwaggerParameter(param.Data()))
 			}
-			// sort parameters
-			sort.Sort(ParameterSorter(operation.Parameters))
-
 			sws.addModelsFromRouteTo(&operation, route, &decl)
 			api.Operations = append(api.Operations, operation)
 		}
 		decl.Apis = append(decl.Apis, api)
 	}
 	return decl
-}
-
-// composeResponseMessages takes the ResponseErrors (if any) and creates ResponseMessages from them.
-func composeResponseMessages(route restful.Route, decl *ApiDeclaration) (messages []ResponseMessage) {
-	if route.ResponseErrors == nil {
-		return messages
-	}
-	// sort by code
-	codes := sort.IntSlice{}
-	for code, _ := range route.ResponseErrors {
-		codes = append(codes, code)
-	}
-	codes.Sort()
-	for _, code := range codes {
-		each := route.ResponseErrors[code]
-		message := ResponseMessage{
-			Code:    code,
-			Message: each.Message,
-		}
-		if each.Model != nil {
-			st := reflect.TypeOf(each.Model)
-			isCollection, st := detectCollectionType(st)
-			modelName := modelBuilder{}.keyFrom(st)
-			if isCollection {
-				modelName = "array[" + modelName + "]"
-			}
-			modelBuilder{decl.Models}.addModel(st, "")
-			// reference the model
-			message.ResponseModel = modelName
-		}
-		messages = append(messages, message)
-	}
-	return
 }
 
 // addModelsFromRoute takes any read or write sample from the Route and creates a Swagger model from it.
@@ -247,7 +196,9 @@ func (sws SwaggerService) addModelsFromRouteTo(operation *Operation, route restf
 	}
 }
 
-func detectCollectionType(st reflect.Type) (bool, reflect.Type) {
+// addModelFromSample creates and adds (or overwrites) a Model from a sample resource
+func (sws SwaggerService) addModelFromSampleTo(operation *Operation, isResponse bool, sample interface{}, models map[string]Model) {
+	st := reflect.TypeOf(sample)
 	isCollection := false
 	if st.Kind() == reflect.Slice || st.Kind() == reflect.Array {
 		st = st.Elem()
@@ -260,13 +211,6 @@ func detectCollectionType(st reflect.Type) (bool, reflect.Type) {
 			}
 		}
 	}
-	return isCollection, st
-}
-
-// addModelFromSample creates and adds (or overwrites) a Model from a sample resource
-func (sws SwaggerService) addModelFromSampleTo(operation *Operation, isResponse bool, sample interface{}, models map[string]Model) {
-	st := reflect.TypeOf(sample)
-	isCollection, st := detectCollectionType(st)
 	modelName := modelBuilder{}.keyFrom(st)
 	if isResponse {
 		if isCollection {
@@ -279,15 +223,13 @@ func (sws SwaggerService) addModelFromSampleTo(operation *Operation, isResponse 
 
 func asSwaggerParameter(param restful.ParameterData) Parameter {
 	return Parameter{
-		DataTypeFields: DataTypeFields{
-			Type:   &param.DataType,
-			Format: asFormat(param.DataType),
-		},
 		Name:        param.Name,
 		Description: param.Description,
 		ParamType:   asParamType(param.Kind),
-
-		Required: param.Required}
+		Type:        param.DataType,
+		DataType:    param.DataType,
+		Format:      asFormat(param.DataType),
+		Required:    param.Required}
 }
 
 // Between 1..7 path parameters is supported

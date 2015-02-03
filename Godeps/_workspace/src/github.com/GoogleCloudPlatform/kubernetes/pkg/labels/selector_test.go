@@ -18,6 +18,7 @@ package labels
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
@@ -113,6 +114,15 @@ func TestSelectorMatches(t *testing.T) {
 	expectNoMatch(t, "foo=bar,foobar=bar,baz=blah", labelset)
 }
 
+func TestOneTermEqualSelector(t *testing.T) {
+	if !OneTermEqualSelector("x", "y").Matches(Set{"x": "y"}) {
+		t.Errorf("No match when match expected.")
+	}
+	if OneTermEqualSelector("x", "y").Matches(Set{"x": "z"}) {
+		t.Errorf("Match when none expected.")
+	}
+}
+
 func expectMatchDirect(t *testing.T, selector, ls Set) {
 	if !SelectorFromSet(selector).Matches(ls) {
 		t.Errorf("Wanted %s to match '%s', but it did not.\n", selector, ls)
@@ -192,10 +202,10 @@ func TestRequiresExactMatch(t *testing.T) {
 	for k, v := range testCases {
 		value, found := v.S.RequiresExactMatch(v.Label)
 		if value != v.Value {
-			t.Errorf("%s: expected value %v, got %s", k, v.Value, value)
+			t.Errorf("%s: expected value %s, got %s", k, v.Value, value)
 		}
 		if found != v.Found {
-			t.Errorf("%s: expected found %v, got %s", k, v.Found, found)
+			t.Errorf("%s: expected found %t, got %t", k, v.Found, found)
 		}
 	}
 }
@@ -213,8 +223,9 @@ func TestRequirementConstructor(t *testing.T) {
 		{"x", In, util.NewStringSet("foo"), true},
 		{"x", NotIn, util.NewStringSet("foo"), true},
 		{"x", Exists, nil, true},
-		{"abcdefghijklmnopqrstuvwxy", Exists, nil, false}, //breaks DNS952 rule that len(key) < 25
-		{"1foo", In, util.NewStringSet("bar"), false},     //breaks DNS952 rule that keys start with [a-z]
+		{"1foo", In, util.NewStringSet("bar"), true},
+		{"1234", In, util.NewStringSet("bar"), true},
+		{strings.Repeat("a", 64), Exists, nil, false}, //breaks DNS rule that len(key) <= 63
 	}
 	for _, rc := range requirementConstructorTests {
 		if _, err := NewRequirement(rc.Key, rc.Op, rc.Vals); err == nil && !rc.Success {
@@ -300,16 +311,16 @@ func TestSetSelectorParser(t *testing.T) {
 		Valid bool
 	}{
 		{"", &LabelSelector{Requirements: nil}, true, true},
-		{"x", &LabelSelector{Requirements: []Requirement{
+		{"\rx", &LabelSelector{Requirements: []Requirement{
 			getRequirement("x", Exists, nil, t),
 		}}, true, true},
-		{"foo in (abc)", &LabelSelector{Requirements: []Requirement{
+		{"foo  in	 (abc)", &LabelSelector{Requirements: []Requirement{
 			getRequirement("foo", In, util.NewStringSet("abc"), t),
 		}}, true, true},
-		{"x not in (abc)", &LabelSelector{Requirements: []Requirement{
+		{"x not\n\tin (abc)", &LabelSelector{Requirements: []Requirement{
 			getRequirement("x", NotIn, util.NewStringSet("abc"), t),
 		}}, true, true},
-		{"x not in (abc,def)", &LabelSelector{Requirements: []Requirement{
+		{"x  not in	\t	(abc,def)", &LabelSelector{Requirements: []Requirement{
 			getRequirement("x", NotIn, util.NewStringSet("abc", "def"), t),
 		}}, true, true},
 		{"x in (abc,def)", &LabelSelector{Requirements: []Requirement{
@@ -333,7 +344,6 @@ func TestSetSelectorParser(t *testing.T) {
 		}}, false, true},
 		{"x,,y", nil, true, false},
 		{",x,y", nil, true, false},
-		{"x, y", nil, true, false},
 		{"x nott in (y)", nil, true, false},
 		{"x not in ( )", nil, true, false},
 		{"x not in (, a)", nil, true, false},

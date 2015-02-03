@@ -18,6 +18,7 @@ package meta
 
 import (
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/runtime"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/types"
 )
 
 // VersionInterfaces contains the interfaces one should use for dealing with types of a particular version.
@@ -31,21 +32,32 @@ type VersionInterfaces struct {
 // internal API objects. Attempting to set or retrieve a field on an object that does
 // not support that field (Name, UID, Namespace on lists) will be a no-op and return
 // a default value.
+// TODO: rename to ObjectInterface when we clear up these interfaces.
 type Interface interface {
+	TypeInterface
+
 	Namespace() string
 	SetNamespace(namespace string)
 	Name() string
 	SetName(name string)
-	UID() string
-	SetUID(uid string)
-	APIVersion() string
-	SetAPIVersion(version string)
-	Kind() string
-	SetKind(kind string)
+	UID() types.UID
+	SetUID(uid types.UID)
 	ResourceVersion() string
 	SetResourceVersion(version string)
 	SelfLink() string
 	SetSelfLink(selfLink string)
+	Labels() map[string]string
+	SetLabels(labels map[string]string)
+	Annotations() map[string]string
+	SetAnnotations(annotations map[string]string)
+}
+
+// TypeInterface exposes the type and APIVersion of versioned or internal API objects.
+type TypeInterface interface {
+	APIVersion() string
+	SetAPIVersion(version string)
+	Kind() string
+	SetKind(kind string)
 }
 
 // MetadataAccessor lets you work with object and list metadata from any of the versioned or
@@ -67,11 +79,17 @@ type MetadataAccessor interface {
 	Name(obj runtime.Object) (string, error)
 	SetName(obj runtime.Object, name string) error
 
-	UID(obj runtime.Object) (string, error)
-	SetUID(obj runtime.Object, uid string) error
+	UID(obj runtime.Object) (types.UID, error)
+	SetUID(obj runtime.Object, uid types.UID) error
 
 	SelfLink(obj runtime.Object) (string, error)
 	SetSelfLink(obj runtime.Object, selfLink string) error
+
+	Labels(obj runtime.Object) (map[string]string, error)
+	SetLabels(obj runtime.Object, labels map[string]string) error
+
+	Annotations(obj runtime.Object) (map[string]string, error)
+	SetAnnotations(obj runtime.Object, annotations map[string]string) error
 
 	runtime.ResourceVersioner
 }
@@ -96,5 +114,5 @@ type RESTMapping struct {
 // consumers of Kubernetes compatible REST APIs as defined in docs/api-conventions.md.
 type RESTMapper interface {
 	VersionAndKindForResource(resource string) (defaultVersion, kind string, err error)
-	RESTMapping(version, kind string) (*RESTMapping, error)
+	RESTMapping(kind string, versions ...string) (*RESTMapping, error)
 }

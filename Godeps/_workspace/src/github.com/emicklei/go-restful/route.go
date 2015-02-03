@@ -31,7 +31,6 @@ type Route struct {
 	Doc                     string
 	Operation               string
 	ParameterDocs           []*Parameter
-	ResponseErrors          map[int]ResponseError
 	ReadSample, WriteSample interface{} // structs that model an example request or response payload
 }
 

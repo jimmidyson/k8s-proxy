@@ -1,30 +1,5 @@
 Change history of go-restful
 =
-2014-11-12
-- (api add) ApiVersion(.) for documentation in Swagger UI
-
-2014-11-10
-- (api change) struct fields tagged with "description" show up in Swagger UI
-
-2014-10-31
-- (api change) ReturnsError -> Returns
-- (api add)    RouteBuilder.Do(aBuilder) for DRY use of RouteBuilder
-- fix swagger nested structs
-- sort Swagger response messages by code
-
-2014-10-23
-- (api add) ReturnsError allows you to document Http codes in swagger
-- fixed problem with greedy CurlyRouter
-- (api add) Access-Control-Max-Age in CORS
-- add tracing functionality (injectable) for debugging purposes
-- support JSON parse 64bit int 
-- fix empty parameters for swagger
-- WebServicesUrl is now optional for swagger
-- fixed duplicate AccessControlAllowOrigin in CORS
-- (api change) expose ServeMux in container
-- (api add) added AllowedDomains in CORS
-- (api add) ParameterNamed for detailed documentation
-
 2014-04-16
 - (api add) expose constructor of Request for testing.
 
