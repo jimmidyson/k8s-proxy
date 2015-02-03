@@ -28,11 +28,6 @@
 			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
 		},
 		{
-			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/kubectl",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
-		},
-		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/labels",
 			"Comment": "v0.9.3",
 			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
@@ -95,8 +90,12 @@
 			"Rev": "37e89eb6730ccfebfa05c17940954e4308719317"
 		},
 		{
-			"ImportPath": "github.com/spf13/cobra",
-			"Rev": "b1e90a7943957b51bb96a13b44b844475bcf95c0"
+			"ImportPath": "github.com/mailgun/oxy/forward",
+			"Rev": "509fa8e955b53776caef02ace24588aee8129738"
+		},
+		{
+			"ImportPath": "github.com/mailgun/oxy/utils",
+			"Rev": "509fa8e955b53776caef02ace24588aee8129738"
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",

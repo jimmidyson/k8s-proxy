@@ -62,6 +62,8 @@ func main() {
 		log.Panic("Couldn't start API proxy server", err)
 	}
 
+	http.Handle("/proxy/", NewRequestForwarder(k8sClient))
+
 	if len(options.StaticDir) > 0 {
 		defaultPage := "/"
 		if !options.Html5Mode {
