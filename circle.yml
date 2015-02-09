@@ -6,13 +6,13 @@ machine:
 
 checkout:
   override:
-    - git clone git@github.com:fabric8io/k8s-proxy.git $HOME/k8s-proxy/src/github.com/fabric8io/k8s-proxy
+    - git clone git@github.com:jimmidyson/k8s-proxy.git $HOME/k8s-proxy/src/github.com/jimmidyson/k8s-proxy
 
 dependencies:
   pre:
     - go get github.com/tools/godep
   override:
-    - cd $HOME/k8s-proxy/src/github.com/fabric8io/k8s-proxy
+    - cd $HOME/k8s-proxy/src/github.com/jimmidyson/k8s-proxy
     - make
 
 test:
