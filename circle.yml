@@ -1,16 +1,19 @@
 machine:
+  environment:
+    GOPATH: $GOPATH:$HOME/k8s-proxy
   services:
     - docker
+
+checkout:
+  override:
+    - git clone git@github.com:fabric8io/k8s-proxy.git $HOME/k8s-proxy/src/github.com/fabric8io/k8s-proxy
 
 dependencies:
   pre:
     - go get github.com/tools/godep
   override:
-    - GOOS=linux GOARCH=amd64 godep go build -o build/k8s-proxy
-  post:
-    - mkdir -p stage
-    - cp build/k8s-proxy stage/k8s-proxy
-    - docker build -t jimmidyson/k8s-proxy .
+    - cd $HOME/k8s-proxy/src/github.com/fabric8io/k8s-proxy
+    - make
 
 test:
   override:
@@ -19,6 +22,7 @@ test:
 deployment:
   hub:
     branch: master
+    owner: jimmidyson
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
       - docker push jimmidyson/k8s-proxy
