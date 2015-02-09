@@ -8,6 +8,7 @@ dependencies:
   override:
     - GOOS=linux GOARCH=amd64 godep go build -o build/k8s-proxy
   post:
+    - mkdir -p stage
     - cp build/k8s-proxy stage/k8s-proxy
     - docker build -t jimmidyson/k8s-proxy .
 
