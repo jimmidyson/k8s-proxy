@@ -1,0 +1,21 @@
+machine:
+  services:
+    - docker
+
+depenencies:
+  pre:
+    - go get github.com/tools/godep
+  override:
+    - GOOS=linux GOARCH=amd64 godep go build -o build/k8s-proxy
+  post:
+    - cp build/k8s-proxy stage/k8s-proxy
+    - docker build -t jimmidyson/k8s-proxy .
+
+deployment:
+  hub:
+    branch: master
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push jimmidyson/k8s-proxy
+
+
