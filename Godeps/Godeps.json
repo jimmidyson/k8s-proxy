@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/jimmidyson/k8s-rest-extras",
+	"ImportPath": "github.com/jimmidyson/k8s-proxy",
 	"GoVersion": "go1.3.3",
 	"Deps": [
 		{
@@ -9,53 +9,58 @@
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/api",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/client",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/conversion",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
-			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/health",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/kubectl",
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/labels",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
+		},
+		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/probe",
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/runtime",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/types",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/util",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/version",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/watch",
-			"Comment": "v0.9.3",
-			"Rev": "63a9f0389f5e060878742a538290da814faef61c"
+			"Comment": "v0.10.1",
+			"Rev": "c9c98ab19eaa6f0b2ea17152c9a455338853f4d0"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
@@ -67,17 +72,12 @@
 			"Rev": "1560c5d3d893997048f99f30bbb5af46bd76962b"
 		},
 		{
-			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Comment": "0.2.1-267-g15d2c6e",
-			"Rev": "15d2c6e3eb670c545d0af0604d7f9aff3871af04"
-		},
-		{
 			"ImportPath": "github.com/ghodss/yaml",
 			"Rev": "4fb5c728a37b361a1e971a3bb3d785fcc96b6ef5"
 		},
 		{
 			"ImportPath": "github.com/golang/glog",
-			"Rev": "d1c4472bf2efd3826f2b5bdcc02d8416798d678c"
+			"Rev": "44145f04b68cf362d9c4df2182967c2275eaefed"
 		},
 		{
 			"ImportPath": "github.com/google/cadvisor/info",
@@ -90,12 +90,8 @@
 			"Rev": "37e89eb6730ccfebfa05c17940954e4308719317"
 		},
 		{
-			"ImportPath": "github.com/mailgun/oxy/forward",
-			"Rev": "509fa8e955b53776caef02ace24588aee8129738"
-		},
-		{
-			"ImportPath": "github.com/mailgun/oxy/utils",
-			"Rev": "509fa8e955b53776caef02ace24588aee8129738"
+			"ImportPath": "github.com/spf13/cobra",
+			"Rev": "b1e90a7943957b51bb96a13b44b844475bcf95c0"
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",

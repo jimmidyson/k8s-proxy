@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 
 	k8sclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubectl"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -19,8 +21,9 @@ type Options struct {
 	KubernetesMaster     string `short:"k" long:"kubernetes-master" description:"The URL to the Kubernetes master"`
 	KubernetesApiVersion string `short:"v" long:"kubernetes-api-version" description:"The version of the Kubernetes API to use" default:"v1beta2"`
 	Insecure             bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
-	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from"`
-	Html5Mode            bool   `long:"html5mode" description:"Send default page (/index.html) on 404" default:"true"`
+	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from" default:"."`
+	StaticPrefix         string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
+	Error404             string `long:"404" description:"Page to send on 404"`
 }
 
 func main() {
@@ -58,19 +61,10 @@ func main() {
 		log.Printf("Connecting to Kubernetes master at %v running version %v", options.KubernetesMaster, serverVersion.String())
 	}
 
-	if err := newApiProxyServer(k8sConfig); err != nil {
-		log.Panic("Couldn't start API proxy server", err)
-	}
+	// Add SVG mimetype...
+	mime.AddExtensionType(".svg", "image/svg+xml")
 
-	http.Handle("/proxy/", NewRequestForwarder(k8sClient))
-
-	if len(options.StaticDir) > 0 {
-		defaultPage := "/"
-		if !options.Html5Mode {
-			defaultPage = ""
-		}
-		http.Handle("/", FileServerWithDefault(http.Dir(options.StaticDir), defaultPage))
-	}
+	_, err = kubectl.NewProxyServer(options.StaticDir, options.StaticPrefix, k8sConfig)
 
 	log.Printf("Listening on port %d", options.Port)
 
