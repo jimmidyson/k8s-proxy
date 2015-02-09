@@ -2,7 +2,7 @@ machine:
   services:
     - docker
 
-depenencies:
+dependencies:
   pre:
     - go get github.com/tools/godep
   override:
