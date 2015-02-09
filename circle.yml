@@ -11,6 +11,10 @@ dependencies:
     - cp build/k8s-proxy stage/k8s-proxy
     - docker build -t jimmidyson/k8s-proxy .
 
+test:
+  override:
+    - godep go test ./...
+
 deployment:
   hub:
     branch: master
