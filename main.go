@@ -23,6 +23,7 @@ type Options struct {
 	Insecure             bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
 	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from" default:"."`
 	StaticPrefix         string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
+	ApiPrefix            string `long:"api-prefix" description:"Prefix to serve static files on" default:"/api/"`
 	Error404             string `long:"404" description:"Page to send on 404"`
 }
 
@@ -64,7 +65,7 @@ func main() {
 	// Add SVG mimetype...
 	mime.AddExtensionType(".svg", "image/svg+xml")
 
-	_, err = kubectl.NewProxyServer(options.StaticDir, options.StaticPrefix, k8sConfig)
+	_, err = kubectl.NewProxyServer(options.StaticDir, options.ApiPrefix, options.StaticPrefix, k8sConfig)
 
 	log.Printf("Listening on port %d", options.Port)
 
