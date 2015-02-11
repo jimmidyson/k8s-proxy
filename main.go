@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
@@ -69,5 +71,56 @@ func main() {
 
 	log.Printf("Listening on port %d", options.Port)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), nil))
+	if len(options.Error404) > 0 {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), Handle404(http.DefaultServeMux, http.Dir(options.StaticDir), options.Error404)))
+	} else {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), nil))
+	}
+}
+
+type hijack404 struct {
+	http.ResponseWriter
+	r            *http.Request
+	fs           http.FileSystem
+	error404Page string
+	handled      bool
+}
+
+func (h *hijack404) Write(p []byte) (int, error) {
+	if h.handled {
+		f, err := h.fs.Open(h.error404Page)
+		if err != nil {
+			h.ResponseWriter.Write([]byte("404 page not found"))
+			return 0, errors.New("404 page not found")
+		}
+		_, err = f.Stat()
+		if err != nil {
+			h.ResponseWriter.Write([]byte("404 page not found"))
+			return 0, errors.New("404 page not found")
+		}
+		contents, err := ioutil.ReadAll(f)
+		ctype := http.DetectContentType(contents)
+		h.ResponseWriter.Header().Set("Content-Type", ctype)
+		h.ResponseWriter.Write(contents)
+		return 0, nil
+	}
+	return h.ResponseWriter.Write(p)
+}
+
+func (h *hijack404) WriteHeader(code int) {
+	if code == http.StatusNotFound {
+		h.ResponseWriter.Header().Set("Content-Type", "text/html; charset=utf-8")
+		h.handled = true
+	}
+	h.ResponseWriter.WriteHeader(code)
+}
+
+// Handle404 will pass any 404's from the handler to the handle404
+// function. If handle404 returns true, the response is considered complete,
+// and the processing by handler is aborted.
+func Handle404(handler http.Handler, fs http.FileSystem, error404Page string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hijack := &hijack404{ResponseWriter: w, r: r, fs: fs, error404Page: error404Page}
+		handler.ServeHTTP(hijack, r)
+	})
 }
