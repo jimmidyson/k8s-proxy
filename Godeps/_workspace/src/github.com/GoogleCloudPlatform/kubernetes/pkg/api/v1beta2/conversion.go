@@ -341,6 +341,9 @@ func init() {
 			if err := s.Convert(&in.LivenessProbe, &out.LivenessProbe, 0); err != nil {
 				return err
 			}
+			if err := s.Convert(&in.ReadinessProbe, &out.ReadinessProbe, 0); err != nil {
+				return err
+			}
 			if err := s.Convert(&in.Lifecycle, &out.Lifecycle, 0); err != nil {
 				return err
 			}
@@ -423,6 +426,9 @@ func init() {
 			if err := s.Convert(&in.LivenessProbe, &out.LivenessProbe, 0); err != nil {
 				return err
 			}
+			if err := s.Convert(&in.ReadinessProbe, &out.ReadinessProbe, 0); err != nil {
+				return err
+			}
 			if err := s.Convert(&in.Lifecycle, &out.Lifecycle, 0); err != nil {
 				return err
 			}
@@ -475,6 +481,9 @@ func init() {
 			if err := s.Convert(&in.Info, &out.Info, 0); err != nil {
 				return err
 			}
+			if err := s.Convert(&in.Conditions, &out.Conditions, 0); err != nil {
+				return err
+			}
 			out.Message = in.Message
 			out.Host = in.Host
 			out.HostIP = in.HostIP
@@ -486,6 +495,9 @@ func init() {
 				return err
 			}
 			if err := s.Convert(&in.Info, &out.Info, 0); err != nil {
+				return err
+			}
+			if err := s.Convert(&in.Conditions, &out.Conditions, 0); err != nil {
 				return err
 			}
 			out.Message = in.Message
@@ -647,6 +659,21 @@ func init() {
 				return err
 			}
 			if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+				return err
+			}
+			return nil
+		},
+		func(in *Namespace, out *newer.Namespace, s conversion.Scope) error {
+			if err := s.Convert(&in.TypeMeta, &out.TypeMeta, 0); err != nil {
+				return err
+			}
+			if err := s.Convert(&in.TypeMeta, &out.ObjectMeta, 0); err != nil {
+				return err
+			}
+			if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+				return err
+			}
+			if err := s.Convert(&in.Labels, &out.ObjectMeta.Labels, 0); err != nil {
 				return err
 			}
 			return nil

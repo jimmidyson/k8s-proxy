@@ -215,6 +215,8 @@ Find more information at https://github.com/GoogleCloudPlatform/kubernetes.`,
 	cmds.AddCommand(f.NewCmdStop(out))
 	cmds.AddCommand(f.NewCmdExposeService(out))
 
+	cmds.AddCommand(f.NewCmdLabel(out))
+
 	return cmds
 }
 
@@ -325,7 +327,7 @@ func DefaultClientConfig(flags *pflag.FlagSet) clientcmd.ClientConfig {
 
 func checkErr(err error) {
 	if err != nil {
-		glog.FatalDepth(1, err)
+		glog.FatalDepth(1, err.Error())
 	}
 }
 
