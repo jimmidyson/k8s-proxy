@@ -25,8 +25,8 @@ type Options struct {
 	Insecure             bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
 	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from" default:"."`
 	StaticPrefix         string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
-	ApiPrefix            string `long:"api-prefix" description:"Prefix to serve static files on" default:"/api/"`
-	Error404             string `long:"404" description:"Page to send on 404"`
+	ApiPrefix            string `long:"api-prefix" description:"Prefix to serve Kubernetes API on" default:"/api/"`
+	Error404             string `long:"404" description:"Page to send on 404 (useful for e.g. Angular html5mode default page)"`
 }
 
 func main() {
