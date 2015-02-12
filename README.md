@@ -1,4 +1,4 @@
-# Kubernetes Proxy
+# Kubernetes Proxy [![Circle CI](https://circleci.com/gh/jimmidyson/k8s-proxy.svg?style=svg)](https://circleci.com/gh/jimmidyson/k8s-proxy)
 
 Provides a way to run a proxy to the Kubernetes API server as well as providing a
 proxy to running services & pods via their Kubernetes resource names.
