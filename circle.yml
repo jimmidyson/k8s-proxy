@@ -24,8 +24,7 @@ deployment:
     branch: master
     owner: jimmidyson
     commands:
-      - docker tag k8s-proxy jimmidyson/k8s-proxy
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-      - docker push jimmidyson/k8s-proxy
+      - make image release
 
 
