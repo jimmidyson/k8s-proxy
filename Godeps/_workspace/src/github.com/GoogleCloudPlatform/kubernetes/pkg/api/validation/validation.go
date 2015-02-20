@@ -352,6 +352,22 @@ func validateVolumeMounts(mounts []api.VolumeMount, volumes util.StringSet) errs
 	return allErrs
 }
 
+func validateProbe(probe *api.Probe) errs.ValidationErrorList {
+	allErrs := errs.ValidationErrorList{}
+
+	if probe == nil {
+		return allErrs
+	}
+	allErrs = append(allErrs, validateHandler(&probe.Handler)...)
+	if probe.InitialDelaySeconds < 0 {
+		allErrs = append(allErrs, errs.NewFieldInvalid("initialDelay", probe.InitialDelaySeconds, "may not be less than zero"))
+	}
+	if probe.TimeoutSeconds < 0 {
+		allErrs = append(allErrs, errs.NewFieldInvalid("timeout", probe.TimeoutSeconds, "may not be less than zero"))
+	}
+	return allErrs
+}
+
 // AccumulateUniquePorts runs an extraction function on each Port of each Container,
 // accumulating the results and returning an error if any ports conflict.
 func AccumulateUniquePorts(containers []api.Container, accumulator map[int]bool, extract func(*api.Port) int) errs.ValidationErrorList {
@@ -465,6 +481,8 @@ func validateContainers(containers []api.Container, volumes util.StringSet) errs
 		if ctr.Lifecycle != nil {
 			cErrs = append(cErrs, validateLifecycle(ctr.Lifecycle).Prefix("lifecycle")...)
 		}
+		cErrs = append(cErrs, validateProbe(ctr.LivenessProbe).Prefix("livenessProbe")...)
+		cErrs = append(cErrs, validateProbe(ctr.ReadinessProbe).Prefix("readinessProbe")...)
 		cErrs = append(cErrs, validatePorts(ctr.Ports).Prefix("ports")...)
 		cErrs = append(cErrs, validateEnv(ctr.Env).Prefix("env")...)
 		cErrs = append(cErrs, validateVolumeMounts(ctr.VolumeMounts, volumes).Prefix("volumeMounts")...)
@@ -561,7 +579,8 @@ func ValidatePodSpec(spec *api.PodSpec) errs.ValidationErrorList {
 	return allErrs
 }
 
-// ValidatePodUpdate tests to see if the update is legal
+// ValidatePodUpdate tests to see if the update is legal for an end user to make. newPod is updated with fields
+// that cannot be changed.
 func ValidatePodUpdate(newPod, oldPod *api.Pod) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 
@@ -584,6 +603,7 @@ func ValidatePodUpdate(newPod, oldPod *api.Pod) errs.ValidationErrorList {
 		allErrs = append(allErrs, errs.NewFieldInvalid("spec.containers", newPod.Spec.Containers, "some fields are immutable"))
 	}
 
+	newPod.Status = oldPod.Status
 	return allErrs
 }
 

@@ -307,7 +307,7 @@ type TypeMeta struct {
 	//
 	// If this field is specified, and Name is not present, the server will NOT return a 409 if the
 	// generated name exists - instead, it will either return 201 Created or 500 with Reason
-	// TryAgainLater indicating a unique name could not be found in the time allotted, and the client
+	// ServerTimeout indicating a unique name could not be found in the time allotted, and the client
 	// should retry (optionally after the time indicated in the Retry-After header).
 	GenerateName string `json:"generateName,omitempty" description:"an optional prefix to use to generate a unique name; has the same validation rules as name; optional, and is applied only name if is not specified"`
 
@@ -537,9 +537,10 @@ type Service struct {
 	// PublicIPs are used by external load balancers.
 	PublicIPs []string `json:"publicIPs,omitempty" description:"externally visible IPs from which to select the address for the external load balancer"`
 
-	// ContainerPort is the name of the port on the container to direct traffic to.
-	// Optional, if unspecified use the first port on the container.
-	ContainerPort util.IntOrString `json:"containerPort,omitempty" description:"number or name of the port to access on the containers belonging to pods targeted by the service"`
+	// ContainerPort is the name or number of the port on the container to direct traffic to.
+	// This is useful if the containers the service points to have multiple open ports.
+	// Optional: If unspecified, the first port on the container will be used.
+	ContainerPort util.IntOrString `json:"containerPort,omitempty" description:"number or name of the port to access on the containers belonging to pods targeted by the service; defaults to the container's first open port"`
 
 	// PortalIP is usually assigned by the master.  If specified by the user
 	// we will try to respect it or else fail the request.  This field can
@@ -778,7 +779,7 @@ const (
 	// Status code 422
 	StatusReasonInvalid StatusReason = "Invalid"
 
-	// StatusReasonTryAgainLater means the server can be reached and understood the request,
+	// StatusReasonServerTimeout means the server can be reached and understood the request,
 	// but cannot complete the action in a reasonable time. The client should retry the request.
 	// This is may be due to temporary server load or a transient communication issue with
 	// another server. Status code 500 is used because the HTTP spec provides no suitable
@@ -787,7 +788,7 @@ const (
 	//   "kind" string - the kind attribute of the resource being acted on.
 	//   "id"   string - the operation that is being attempted.
 	// Status code 500
-	StatusReasonTryAgainLater StatusReason = "TryAgainLater"
+	StatusReasonServerTimeout StatusReason = "ServerTimeout"
 )
 
 // StatusCause provides more information about an api.Status failure, including

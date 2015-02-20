@@ -34,28 +34,32 @@ import (
 // retrieves one or more resources from a server.
 func (f *Factory) NewCmdGet(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get [(-o|--output=)json|yaml|...] <resource> [<id>]",
+		Use:   "get [(-o|--output=)json|yaml|template|...] <resource> [<id>]",
 		Short: "Display one or many resources",
 		Long: `Display one or many resources.
 
 Possible resources include pods (po), replication controllers (rc), services
 (se), minions (mi), or events (ev).
 
-If you specify a Go template, you can use any fields defined for the API version
-you are connecting to the server with.
+By specifying the output as 'template' and providing a Go template as the value
+of the --template flag, you can filter the attributes of the fetched resource(s).
 
 Examples:
-  $ kubectl get pods
-  <list all pods in ps output format>
 
-  $ kubectl get replicationController 1234-56-7890-234234-456456
-  <list single replication controller in ps output format>
+    // List all pods in ps output format.
+    $ kubectl get pods
 
-  $ kubectl get -o json pod 1234-56-7890-234234-456456
-  <list single pod in json output format>
+    // List a single replication controller with specified ID in ps output format.
+    $ kubectl get replicationController 1234-56-7890-234234-456456
 
-  $ kubectl get rc,services
-  <list replication controllers and services together in ps output format>`,
+    // List a single pod in JSON output format.
+    $ kubectl get -o json pod 1234-56-7890-234234-456456
+
+    // Return only the status value of the specified pod.
+    $ kubectl get -o template pod 1234-56-7890-234234-456456 --template={{.currentState.status}}
+
+    // List all replication controllers and services together in ps output format.
+    $ kubectl get rc,services`,
 		Run: func(cmd *cobra.Command, args []string) {
 			RunGet(f, out, cmd, args)
 		},
@@ -83,7 +87,7 @@ func RunGet(f *Factory, out io.Writer, cmd *cobra.Command, args []string) {
 		r := resource.NewBuilder(mapper, typer, f.ClientMapperForCommand(cmd)).
 			NamespaceParam(cmdNamespace).DefaultNamespace().
 			SelectorParam(selector).
-			ResourceTypeOrNameArgs(args...).
+			ResourceTypeOrNameArgs(true, args...).
 			SingleResourceType().
 			Do()
 		checkErr(r.Err())
@@ -120,7 +124,7 @@ func RunGet(f *Factory, out io.Writer, cmd *cobra.Command, args []string) {
 	b := resource.NewBuilder(mapper, typer, f.ClientMapperForCommand(cmd)).
 		NamespaceParam(cmdNamespace).DefaultNamespace().
 		SelectorParam(selector).
-		ResourceTypeOrNameArgs(args...).
+		ResourceTypeOrNameArgs(true, args...).
 		Latest()
 	printer, generic, err := util.PrinterForCommand(cmd)
 	checkErr(err)
