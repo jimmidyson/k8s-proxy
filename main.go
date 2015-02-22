@@ -28,6 +28,8 @@ type Options struct {
 	StaticPrefix         string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
 	ApiPrefix            string `long:"api-prefix" description:"Prefix to serve Kubernetes API on" default:"/api/"`
 	Error404             string `long:"404" description:"Page to send on 404 (useful for e.g. Angular html5mode default page)"`
+	TlsCertFile          string `long:"tls-cert" description:"TLS cert file"`
+	TlsKeyFile           string `long:"tls-key" description:"TLS key file"`
 }
 
 func main() {
@@ -83,7 +85,12 @@ func main() {
 	if len(options.Error404) > 0 {
 		srv.Handler = Handle404(http.DefaultServeMux, http.Dir(options.StaticDir), options.Error404)
 	}
-	srv.ListenAndServeTLS("mycert1.cer", "mycert1.key")
+
+	if len(options.TlsCertFile) > 0 && len(options.TlsKeyFile) > 0 {
+		log.Fatal(srv.ListenAndServeTLS(options.TlsCertFile, options.TlsKeyFile))
+	} else {
+		log.Fatal(srv.ListenAndServe())
+	}
 }
 
 type hijack404 struct {
