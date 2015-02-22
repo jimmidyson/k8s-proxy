@@ -11,6 +11,7 @@ import (
 
 	k8sclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubectl"
+	"github.com/bradfitz/http2"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -71,11 +72,18 @@ func main() {
 
 	log.Printf("Listening on port %d", options.Port)
 
-	if len(options.Error404) > 0 {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), Handle404(http.DefaultServeMux, http.Dir(options.StaticDir), options.Error404)))
-	} else {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", options.Port), nil))
+	http2.VerboseLogs = true
+
+	srv := &http.Server{
+		Addr: fmt.Sprintf(":%d", options.Port),
 	}
+
+	http2.ConfigureServer(srv, &http2.Server{})
+
+	if len(options.Error404) > 0 {
+		srv.Handler = Handle404(http.DefaultServeMux, http.Dir(options.StaticDir), options.Error404)
+	}
+	srv.ListenAndServeTLS("mycert1.cer", "mycert1.key")
 }
 
 type hijack404 struct {
