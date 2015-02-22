@@ -74,8 +74,6 @@ func main() {
 
 	log.Printf("Listening on port %d", options.Port)
 
-	http2.VerboseLogs = true
-
 	srv := &http.Server{
 		Addr: fmt.Sprintf(":%d", options.Port),
 	}
