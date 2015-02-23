@@ -7,6 +7,8 @@ You can also set a directory to serve static files from so you can easily create
 a web app that uses the proxy endpoints. With the popularity of Angular, you can also
 specify to return `/index.html` instead of 404s. This makes it easy to use `html5mode`.
 
+Finally, specify `tls-cert` & `tls-key` to listen over TLS with http2 enabled.
+
 ## Running
 
 ```
@@ -21,7 +23,10 @@ Application Options:
   -w, --www=                    Optional directory to serve static files from (.)
       --www-prefix=             Prefix to serve static files on (/)
       --api-prefix=             Prefix to serve Kubernetes API on (/api/)
-      --404=                    Page to send on 404 (useful for e.g. Angular html5mode default page)
+      --404=                    Page to send on 404 (useful for e.g. Angular html5mode
+                                default page)
+      --tls-cert=               TLS cert file
+      --tls-key=                TLS key file
 
 Help Options:
   -h, --help                    Show this help message
