@@ -7,6 +7,8 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 
 	k8sclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
@@ -27,6 +29,7 @@ type Options struct {
 	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from" default:"."`
 	StaticPrefix         string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
 	ApiPrefix            string `long:"api-prefix" description:"Prefix to serve Kubernetes API on" default:"/api/"`
+	OsApiPrefix          string `long:"osapi-prefix" description:"Prefix to serve OpenShift API on (optional)"`
 	Error404             string `long:"404" description:"Page to send on 404 (useful for e.g. Angular html5mode default page)"`
 	TlsCertFile          string `long:"tls-cert" description:"TLS cert file"`
 	TlsKeyFile           string `long:"tls-key" description:"TLS key file"`
@@ -47,6 +50,8 @@ func main() {
 	if len(options.KubernetesMaster) == 0 && len(os.Getenv("KUBERNETES_SERVICE_HOST")) > 0 {
 		options.KubernetesMaster = "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
 	}
+
+	kubernetesUrl, _ := url.Parse(options.KubernetesMaster)
 
 	options.KubernetesMaster = os.ExpandEnv(options.KubernetesMaster)
 
@@ -71,6 +76,19 @@ func main() {
 	mime.AddExtensionType(".svg", "image/svg+xml")
 
 	_, err = kubectl.NewProxyServer(options.StaticDir, options.ApiPrefix, options.StaticPrefix, k8sConfig)
+
+	if len(options.OsApiPrefix) > 0 {
+		transport, _ := k8sclient.TransportFor(k8sConfig)
+
+		osapiRP := httputil.NewSingleHostReverseProxy(&url.URL{
+			Scheme: kubernetesUrl.Scheme,
+			Host:   kubernetesUrl.Host,
+			Path:   "/osapi/",
+		})
+		osapiRP.Transport = transport
+
+		http.Handle(options.OsApiPrefix, http.StripPrefix(options.OsApiPrefix, osapiRP))
+	}
 
 	log.Printf("Listening on port %d", options.Port)
 
