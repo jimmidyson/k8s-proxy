@@ -51,9 +51,9 @@ func main() {
 		options.KubernetesMaster = "https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
 	}
 
-	kubernetesUrl, _ := url.Parse(options.KubernetesMaster)
-
 	options.KubernetesMaster = os.ExpandEnv(options.KubernetesMaster)
+
+	kubernetesUrl, _ := url.Parse(options.KubernetesMaster)
 
 	k8sConfig := &k8sclient.Config{
 		Host:     options.KubernetesMaster,
