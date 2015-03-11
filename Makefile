@@ -1,19 +1,24 @@
-build/k8s-proxy: *.go
-	godep go build -o build/k8s-proxy
+NAME=k8s-proxy
+VERSION=$(shell cat VERSION)
 
-cross:
-	GOOS=linux GOARCH=amd64 godep go build -o build/k8s-proxy-linux64
-	GOOS=darwin GOARCH=amd64 godep go build -o build/k8s-proxy-darwin64
-	GOOS=freebsd GOARCH=amd64 godep go build -o build/k8s-proxy-darwin64
-	GOOS=windows GOARCH=amd64 godep go build -o build/k8s-proxy-windows64.exe
+dev:
+	@docker history $(NAME):dev &> /dev/null \
+		|| docker build -f Dockerfile.dev -t $(NAME):dev .
+	@docker run --rm \
+		-v $(PWD):/go/src/github.com/jimmidyson/$(NAME) \
+		-p 9090:9090 \
+		$(NAME):dev
 
-image:
-	docker build --no-cache -t k8s-proxy .
+build:
+	mkdir -p build
+	docker build -t $(NAME):$(VERSION) .
+	docker save $(NAME):$(VERSION) | gzip -9 > build/$(NAME)_$(VERSION).tgz
 
 release:
-	docker tag k8s-proxy jimmidyson/k8s-proxy
-	docker push jimmidyson/k8s-proxy
+	rm -rf release && mkdir release
+	go get github.com/progrium/gh-release/...
+	cp build/* release
+	gh-release create jimmidyson/$(NAME) $(VERSION) \
+		$(shell git rev-parse --abbrev-ref HEAD) $(VERSION)
 
-.PHONY: clean
-clean:
-	rm -rf build
+.PHONY: dev build release
