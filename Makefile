@@ -9,6 +9,9 @@ dev:
 		-p 9090:9090 \
 		$(NAME):dev
 
+local: *.go
+	godep go build -ldflags "-X main.Version $(VERSION)-dev" -o build/k8s-proxy
+
 build:
 	mkdir -p build
 	docker build -t $(NAME):$(VERSION) .
