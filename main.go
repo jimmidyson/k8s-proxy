@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 
 	k8sclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubectl"
@@ -87,7 +88,7 @@ func main() {
 		})
 		osapiRP.Transport = transport
 
-		http.Handle(options.OsApiPrefix, http.StripPrefix(options.OsApiPrefix, osapiRP))
+		http.Handle(options.OsApiPrefix, http.StripPrefix(options.OsApiPrefix, stripGenericWebhookBody(osapiRP)))
 	}
 
 	log.Printf("Listening on port %d", options.Port)
@@ -107,6 +108,16 @@ func main() {
 	} else {
 		log.Fatal(srv.ListenAndServe())
 	}
+}
+
+func stripGenericWebhookBody(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		splitPath := strings.Split(r.URL.Path, "/")
+		if len(splitPath) == 5 && splitPath[1] == "buildConfigHooks" && splitPath[len(splitPath)-1] == "generic" {
+			r.ContentLength = 0
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 type hijack404 struct {
