@@ -6,7 +6,6 @@ ENV GOPATH /go
 ENV PATH ${GOPATH}/bin:${PATH}
 RUN apk-install go git mercurial
 RUN go get github.com/tools/godep
-COPY . ${GOPATH}/src/github.com/jimmidyson/k8s-proxy
 WORKDIR ${GOPATH}/src/github.com/jimmidyson/k8s-proxy
 CMD godep go build -ldflags "-X main.Version dev" -o /bin/k8s-proxy \
-  && exec /bin/k8s-proxy
+  && exec /bin/k8s-proxy --kubernetes-master=https://172.17.42.1:8443 --insecure

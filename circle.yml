@@ -13,7 +13,7 @@ dependencies:
     - go get github.com/tools/godep
   override:
     - cd $HOME/k8s-proxy/src/github.com/jimmidyson/k8s-proxy
-    - make
+    - make build
 
 test:
   override:
@@ -25,6 +25,9 @@ deployment:
     owner: jimmidyson
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-      - make image release
+      - make build
+      - docker tag k8s-proxy:$(cat VERSION) jimmidyson/k8s-proxy:latest
+      - docker push jimmidyson/k8s-proxy:latest
+
 
 
