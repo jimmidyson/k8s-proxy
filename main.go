@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -114,6 +115,7 @@ func stripGenericWebhookBody(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		splitPath := strings.Split(r.URL.Path, "/")
 		if len(splitPath) == 5 && splitPath[1] == "buildConfigHooks" && splitPath[len(splitPath)-1] == "generic" {
+			r.Body = ioutil.NopCloser(bytes.NewBufferString(""))
 			r.ContentLength = 0
 		}
 		h.ServeHTTP(w, r)
