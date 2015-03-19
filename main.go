@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 
 	k8sclient "github.com/GoogleCloudPlatform/kubernetes/pkg/client"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/kubectl"
@@ -24,17 +25,19 @@ var logger *log.Logger = log.New(os.Stdout, "", 0)
 const prefix = "/api"
 
 type Options struct {
-	Port                 uint16 `short:"p" long:"port" description:"The port to listen on" default:"9090"`
-	KubernetesMaster     string `short:"k" long:"kubernetes-master" description:"The URL to the Kubernetes master"`
-	KubernetesApiVersion string `short:"v" long:"kubernetes-api-version" description:"The version of the Kubernetes API to use" default:"v1beta2"`
-	Insecure             bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
-	StaticDir            string `short:"w" long:"www" description:"Optional directory to serve static files from" default:"."`
-	StaticPrefix         string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
-	ApiPrefix            string `long:"api-prefix" description:"Prefix to serve Kubernetes API on" default:"/api/"`
-	OsApiPrefix          string `long:"osapi-prefix" description:"Prefix to serve OpenShift API on (optional)"`
-	Error404             string `long:"404" description:"Page to send on 404 (useful for e.g. Angular html5mode default page)"`
-	TlsCertFile          string `long:"tls-cert" description:"TLS cert file"`
-	TlsKeyFile           string `long:"tls-key" description:"TLS key file"`
+	Port                       uint16 `short:"p" long:"port" description:"The port to listen on" default:"9090"`
+	KubernetesMaster           string `short:"k" long:"kubernetes-master" description:"The URL to the Kubernetes master"`
+	KubernetesApiVersion       string `short:"v" long:"kubernetes-api-version" description:"The version of the Kubernetes API to use" default:"v1beta2"`
+	Insecure                   bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
+	OpenShiftOAuthClientId     string `short:"o" long:"oauth-client" description:"Kubernetes OAuth client ID to use" default:"fabric8-console"`
+	OpenShiftOAuthAuthorizeUri string `short:"u" long:"oauth-authorize-uri" description:"Kubernetes OAuth authorize URI" default:"https://localhost:8443/oauth/authorize"`
+	StaticDir                  string `short:"w" long:"www" description:"Optional directory to serve static files from" default:"."`
+	StaticPrefix               string `long:"www-prefix" description:"Prefix to serve static files on" default:"/"`
+	ApiPrefix                  string `long:"api-prefix" description:"Prefix to serve Kubernetes API on" default:"/api/"`
+	OsApiPrefix                string `long:"osapi-prefix" description:"Prefix to serve OpenShift API on (optional)"`
+	Error404                   string `long:"404" description:"Page to send on 404 (useful for e.g. Angular html5mode default page)"`
+	TlsCertFile                string `long:"tls-cert" description:"TLS cert file"`
+	TlsKeyFile                 string `long:"tls-key" description:"TLS key file"`
 }
 
 func main() {
@@ -76,6 +79,37 @@ func main() {
 
 	// Add SVG mimetype...
 	mime.AddExtensionType(".svg", "image/svg+xml")
+
+	if len(options.OpenShiftOAuthClientId) > 0 && len(options.OpenShiftOAuthAuthorizeUri) > 0 {
+		const configJsTemplate = `
+window.OPENSHIFT_CONFIG = {
+	auth: {
+		oauth_authorize_uri: "{{ .AuthorizeUri }}",
+		oauth_client_id: "{{ .ClientId }}",
+		logout_uri: "",
+	}
+};
+`
+
+		type oauthConfig struct {
+			AuthorizeUri, ClientId string
+		}
+
+		config := &oauthConfig{
+			AuthorizeUri: options.OpenShiftOAuthAuthorizeUri,
+			ClientId:     options.OpenShiftOAuthClientId,
+		}
+
+		t := template.Must(template.New("config.js").Parse(configJsTemplate))
+		var doc bytes.Buffer
+		t.Execute(&doc, config)
+		configJs := doc.String()
+
+		http.HandleFunc("/osconsole/config.js", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/javascript")
+			fmt.Fprintf(w, configJs)
+		})
+	}
 
 	_, err = kubectl.NewProxyServer(options.StaticDir, options.ApiPrefix, options.StaticPrefix, k8sConfig)
 
