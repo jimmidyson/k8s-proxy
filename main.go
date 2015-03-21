@@ -28,6 +28,7 @@ type Options struct {
 	Port                       uint16 `short:"p" long:"port" description:"The port to listen on" default:"9090"`
 	KubernetesMaster           string `short:"k" long:"kubernetes-master" description:"The URL to the Kubernetes master"`
 	KubernetesApiVersion       string `short:"v" long:"kubernetes-api-version" description:"The version of the Kubernetes API to use" default:"v1beta2"`
+	KubernetesCACertFile       string `long:"kubernetes-ca-cert" description:"Kubernetes CA cert file"`
 	Insecure                   bool   `long:"insecure" description:"Trust all server certificates" default:"false"`
 	OpenShiftOAuthClientId     string `short:"o" long:"oauth-client" description:"Kubernetes OAuth client ID to use" default:"fabric8-console"`
 	OpenShiftOAuthAuthorizeUri string `short:"u" long:"oauth-authorize-uri" description:"Kubernetes OAuth authorize URI" default:"https://localhost:8443/oauth/authorize"`
@@ -64,6 +65,9 @@ func main() {
 		Host:     options.KubernetesMaster,
 		Version:  options.KubernetesApiVersion,
 		Insecure: options.Insecure,
+		TLSClientConfig: k8sclient.TLSClientConfig{
+			CAFile: options.KubernetesCACertFile,
+		},
 	}
 
 	k8sClient, err := k8sclient.New(k8sConfig)
